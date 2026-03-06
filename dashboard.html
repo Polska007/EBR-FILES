@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EBR Executive Dashboard — Polaris Bank</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<!-- Verdana is system font, no import needed -->
+<style>
+/* ── Base ─────────────────────────────────────────────────────────── */
+:root {
+  --navy:#ffffff; --navy2:#f5f0fa; --navy3:#ede6f5;
+  --teal:#6b2d8b; --gold:#f5a623; --red:#c0392b; --blue:#6b2d8b;
+  --purple:#9b4db8; --green:#27ae60;
+  --mid:#6b5f7a; --dim:rgba(107,45,139,0.05); --border:rgba(107,45,139,0.15);
+  --radius:14px; --shadow:0 8px 32px rgba(0,0,0,0.35);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:Verdana,sans-serif;background:#f5f0fa;color:#1a0533;min-height:100vh;line-height:1.5;}
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:#f5f0fa;}
+::-webkit-scrollbar-thumb{background:#9b4db8;border-radius:3px;}
+
+/* ── NAV ─────────────────────────────────────────────────────────── */
+#nav{
+  position:fixed;top:0;left:0;right:0;z-index:300;height:58px;
+  background:#6b2d8b;backdrop-filter:blur(16px);
+  border-bottom:2px solid #f5a623;
+  display:flex;align-items:center;padding:0 20px;gap:2px;
+}
+.nav-logo{
+  font-family:Verdana,sans-serif;font-weight:800;font-size:0.95rem;
+  color:var(--teal);letter-spacing:2px;margin-right:20px;white-space:nowrap;
+  display:flex;align-items:center;gap:8px;
+}
+.nav-logo span{font-size:1.2rem;}
+.nav-btn{
+  padding:6px 13px;border-radius:7px;border:none;cursor:pointer;font-size:0.75rem;
+  font-weight:500;background:transparent;color:rgba(255,255,255,0.82);white-space:nowrap;
+  transition:all .2s;font-family:Verdana,sans-serif;letter-spacing:0.2px;
+}
+.nav-btn:hover{color:#fff;background:rgba(255,255,255,0.15);}
+.nav-btn.active{color:#6b2d8b;background:#f5a623;font-weight:700;}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+#data-status-dot{width:8px;height:8px;border-radius:50%;background:#555;transition:.3s;flex-shrink:0;}
+#data-status-dot.ok{background:var(--teal);box-shadow:0 0 6px var(--teal);}
+#data-status-dot.partial{background:var(--gold);}
+#data-status-dot.error{background:var(--red);}
+#data-status-label{font-size:0.72rem;color:rgba(255,255,255,0.85);}
+.upload-trigger{
+  background:rgba(0,201,167,0.12);border:1px solid rgba(0,201,167,0.25);
+  color:var(--teal);padding:7px 16px;border-radius:8px;font-size:0.75rem;
+  font-weight:600;cursor:pointer;white-space:nowrap;transition:.2s;font-family:Verdana,sans-serif;
+}
+.upload-trigger:hover{background:var(--teal);color:var(--navy);}
+
+/* ── MAIN ────────────────────────────────────────────────────────── */
+.page{display:none;padding:74px 24px 48px;max-width:1440px;margin:0 auto;}
+.page.active{display:block;}
+
+/* ── PAGE HEADER ─────────────────────────────────────────────────── */
+.ph{margin-bottom:24px;}
+.ph-top{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+.ph-title{font-family:Verdana,sans-serif;font-size:1.7rem;font-weight:800;color:#1a0533;line-height:1.1;}
+.ph-sub{color:#6b5f7a;font-size:0.85rem;margin-top:5px;}
+.ph-hr{height:2px;background:linear-gradient(90deg,#6b2d8b 0%,#f5a623 60%,rgba(245,166,35,0.1) 100%);margin-top:14px;border-radius:2px;}
+
+/* ── CARDS ───────────────────────────────────────────────────────── */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:22px;}
+.kpi{
+  background:linear-gradient(145deg,#6b2d8b 0%,#4a1a6b 100%);
+  border:none;border-radius:var(--radius);padding:20px 18px;position:relative;overflow:hidden;
+  transition:transform .2s,box-shadow .2s;box-shadow:0 4px 16px rgba(107,45,139,0.25);
+}
+.kpi:hover{transform:translateY(-2px);box-shadow:var(--shadow);}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:var(--ac,#f5a623);border-radius:var(--radius) var(--radius) 0 0;}
+.kpi-lbl{font-size:0.68rem;color:rgba(255,255,255,0.70);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:8px;font-weight:600;}
+.kpi-val{font-family:Verdana,sans-serif;font-size:1.6rem;font-weight:800;color:#ffffff;line-height:1;margin-bottom:5px;}
+.kpi-sub{font-size:0.72rem;color:rgba(255,255,255,0.65);}
+
+/* ── CHART CARDS ─────────────────────────────────────────────────── */
+.cc{
+  background:#ffffff;
+  border:1px solid rgba(107,45,139,0.15);border-radius:var(--radius);padding:22px;
+  transition:box-shadow .2s;box-shadow:0 2px 10px rgba(107,45,139,0.08);
+}
+.cc:hover{box-shadow:0 6px 24px rgba(107,45,139,0.15);}
+.cc-title{font-family:Verdana,sans-serif;font-size:0.88rem;font-weight:700;color:#1a0533;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.cc-title .badge-sm{font-size:0.65rem;padding:2px 7px;background:rgba(107,45,139,0.12);color:#6b2d8b;border-radius:20px;font-weight:600;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+.grid3{display:grid;grid-template-columns:2fr 1fr;gap:18px;}
+.grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px;}
+
+/* ── CONTROLS ────────────────────────────────────────────────────── */
+.ctrl-row{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;margin-bottom:18px;}
+.ctrl-group{display:flex;flex-direction:column;gap:5px;}
+.ctrl-group label{font-size:0.72rem;color:#6b5f7a;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;}
+select,input[type=text]{
+  background:#ffffff;border:1px solid rgba(107,45,139,0.25);
+  border-radius:8px;color:#1a0533;padding:8px 12px;font-family:Verdana,sans-serif;
+  font-size:0.82rem;outline:none;transition:.2s;
+}
+select:focus,input:focus{border-color:var(--teal);}
+select option{background:#ffffff;color:#1a0533;}
+
+/* ── TABS ────────────────────────────────────────────────────────── */
+.tab-bar{display:flex;gap:6px;margin-bottom:20px;border-bottom:2px solid rgba(107,45,139,0.2);padding-bottom:0;flex-wrap:wrap;}
+.tab-btn{padding:8px 16px;border-radius:8px 8px 0 0;border:1px solid transparent;
+  background:transparent;color:#6b5f7a;font-size:0.78rem;font-weight:600;cursor:pointer;
+  transition:.2s;font-family:Verdana,sans-serif;border-bottom:none;margin-bottom:-2px;}
+.tab-btn:hover{color:#6b2d8b;background:rgba(107,45,139,0.07);}
+.tab-btn.active{color:#ffffff;background:#6b2d8b;border-color:#6b2d8b;}
+.tab-pane{display:none;}.tab-pane.active{display:block;}
+
+/* ── TABLE ───────────────────────────────────────────────────────── */
+.tbl-wrap{overflow-x:auto;border-radius:10px;border:1px solid rgba(107,45,139,0.15);}
+table{width:100%;border-collapse:collapse;font-size:0.81rem;}
+thead th{
+  background:linear-gradient(90deg,#6b2d8b,#9b4db8);color:#ffffff;font-weight:700;
+  text-transform:uppercase;font-size:0.67rem;letter-spacing:1px;
+  padding:11px 14px;text-align:left;border-bottom:1px solid rgba(107,45,139,0.3);white-space:nowrap;
+}
+tbody tr{border-bottom:1px solid rgba(107,45,139,0.08);transition:.12s;}
+tbody tr:hover{background:rgba(107,45,139,0.05);}
+tbody td{padding:9px 14px;color:#2d1a3a;}
+.pill{display:inline-flex;align-items:center;padding:2px 10px;border-radius:20px;font-size:0.68rem;font-weight:700;letter-spacing:0.3px;}
+.pill-t{background:rgba(107,45,139,0.12);color:#6b2d8b;}
+.pill-g{background:rgba(39,174,96,0.12);color:#1e7e34;}
+.pill-y{background:rgba(245,166,35,0.18);color:var(--gold);}
+.pill-r{background:rgba(231,76,60,0.15);color:var(--red);}
+.pill-b{background:rgba(107,45,139,0.10);color:#6b2d8b;}
+.pill-p{background:rgba(155,77,184,0.12);color:#7b2d9b;}
+
+/* ── ACHIEVEMENTS ────────────────────────────────────────────────── */
+.ach-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;}
+.ach-card{
+  background:#ffffff;border:1px solid rgba(107,45,139,0.15);border-radius:var(--radius);
+  padding:18px;position:relative;transition:.2s;box-shadow:0 2px 8px rgba(107,45,139,0.07);
+}
+.ach-card:hover{border-color:rgba(107,45,139,0.35);box-shadow:0 6px 20px rgba(107,45,139,0.12);}
+.ach-cat{font-size:0.68rem;font-weight:700;letter-spacing:0.5px;}
+.ach-title{font-family:Verdana,sans-serif;font-weight:700;font-size:0.9rem;color:#1a0533;
+  margin:8px 0 6px;line-height:1.35;}
+.ach-body{font-size:0.81rem;color:#6b5f7a;line-height:1.65;margin-bottom:10px;}
+.ach-meta{font-size:0.7rem;color:rgba(107,45,139,0.55);display:flex;align-items:center;gap:8px;}
+.ach-del{position:absolute;top:10px;right:10px;border:none;background:transparent;
+  color:rgba(231,76,60,0.5);cursor:pointer;font-size:0.9rem;transition:.15s;}
+.ach-del:hover{color:var(--red);}
+.ach-form{background:rgba(107,45,139,0.04);border:1px solid rgba(107,45,139,0.2);
+  border-radius:var(--radius);padding:20px;margin-bottom:20px;}
+.ach-form-title{font-family:Verdana,sans-serif;font-weight:700;color:#1a0533;margin-bottom:14px;font-size:0.95rem;}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+.ach-form input,.ach-form textarea,.ach-form select{width:100%;background:#ffffff;
+  border:1px solid rgba(107,45,139,0.2);border-radius:8px;color:#1a0533;padding:9px 12px;
+  font-family:Verdana,sans-serif;font-size:0.82rem;outline:none;transition:.2s;}
+.ach-form textarea{min-height:72px;resize:vertical;}
+.ach-form input:focus,.ach-form textarea:focus,.ach-form select:focus{border-color:var(--teal);}
+
+/* ── STRATEGY ────────────────────────────────────────────────────── */
+.strat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;}
+.strat-card{background:#ffffff;border:1px solid rgba(107,45,139,0.15);
+  border-radius:var(--radius);padding:22px;border-left:4px solid var(--ac,#6b2d8b);transition:.2s;box-shadow:0 2px 8px rgba(107,45,139,0.07);}
+.strat-card:hover{box-shadow:var(--shadow);}
+.strat-title{font-family:Verdana,sans-serif;font-size:0.95rem;font-weight:700;color:#1a0533;margin-bottom:10px;}
+.strat-card ul{padding-left:0;list-style:none;}
+.strat-card li{font-size:0.81rem;color:#6b5f7a;margin-bottom:5px;line-height:1.6;padding-left:14px;position:relative;}
+.strat-card li::before{content:'›';position:absolute;left:0;color:var(--ac,var(--teal));}
+
+/* ── ORG CHART ───────────────────────────────────────────────────── */
+.org-tree{text-align:center;padding:10px;overflow-x:auto;}
+.org-box{display:inline-block;border-radius:10px;padding:10px 18px;min-width:130px;text-align:center;cursor:default;transition:.2s;}
+.org-box:hover{filter:brightness(1.15);}
+.org-box.root{background:linear-gradient(135deg,rgba(245,166,35,.25),rgba(245,166,35,.10));border:1.5px solid rgba(245,166,35,.6);}
+.org-box.head{background:linear-gradient(135deg,rgba(107,45,139,.18),rgba(107,45,139,.06));border:1.5px solid rgba(107,45,139,.45);}
+.org-box.dh{background:linear-gradient(135deg,rgba(155,77,184,.18),rgba(155,77,184,.06));border:1.5px solid rgba(155,77,184,.45);}
+.org-box.unit{background:linear-gradient(135deg,rgba(245,166,35,.12),rgba(245,166,35,.04));border:1.5px solid rgba(245,166,35,.35);}
+.org-name{font-weight:700;font-size:0.82rem;color:#1a0533;}
+.org-role{font-size:0.67rem;margin-top:2px;}
+.org-line{width:2px;height:20px;background:rgba(107,45,139,0.25);margin:0 auto;}
+.org-row{display:flex;justify-content:center;gap:16px;flex-wrap:wrap;margin-bottom:0;}
+
+/* ── DATA STATUS PANEL ───────────────────────────────────────────── */
+#admin-panel{
+  display:none;position:fixed;inset:0;z-index:400;
+  background:rgba(0,0,0,0.72);backdrop-filter:blur(8px);
+  align-items:center;justify-content:center;
+}
+#admin-panel.open{display:flex;}
+.admin-box{
+  background:#ffffff;border:1px solid rgba(107,45,139,0.2);border-radius:18px;
+  width:min(720px,96vw);max-height:90vh;overflow-y:auto;
+  box-shadow:0 24px 80px rgba(107,45,139,0.3);
+}
+.admin-header{
+  padding:24px 28px 0;display:flex;align-items:flex-start;justify-content:space-between;
+}
+.admin-title{font-family:Verdana,sans-serif;font-size:1.2rem;font-weight:800;color:#1a0533;}
+.admin-sub{color:#6b5f7a;font-size:0.82rem;margin-top:4px;}
+.admin-close{background:transparent;border:none;color:#6b5f7a;font-size:1.3rem;cursor:pointer;padding:4px;}
+.admin-close:hover{color:#1a0533;}
+.ds-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:20px 28px;}
+.ds-item{
+  background:#f9f5fc;border:1.5px dashed rgba(107,45,139,0.25);
+  border-radius:12px;padding:14px;cursor:pointer;transition:.2s;position:relative;
+  display:flex;flex-direction:column;gap:4px;
+}
+.ds-item:hover{background:rgba(107,45,139,0.06);border-color:rgba(107,45,139,0.4);}
+.ds-item.loaded{border-style:solid;border-color:rgba(107,45,139,0.5);background:rgba(107,45,139,0.06);}
+.ds-item.processing{border-color:var(--gold);background:rgba(245,166,35,0.05);}
+.ds-item.error{border-color:rgba(231,76,60,0.4);background:rgba(231,76,60,0.05);}
+.ds-label{font-size:0.8rem;font-weight:700;color:#1a0533;display:flex;align-items:center;gap:7px;}
+.ds-hint{font-size:0.7rem;color:#6b5f7a;}
+.ds-state{font-size:0.68rem;margin-top:2px;}
+.ds-state.ok{color:var(--teal);}
+.ds-state.pending{color:var(--gold);}
+.ds-state.none{color:rgba(107,45,139,0.4);}
+.ds-item input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.ds-item.loaded input[type=file],.ds-item.processing input[type=file]{pointer-events:none;}
+.admin-log{
+  margin:0 28px;background:#f5f0fa;border:1px solid rgba(107,45,139,0.15);
+  border-radius:10px;padding:12px 14px;font-family:'Courier New',monospace;
+  font-size:0.72rem;color:#4a3a5a;max-height:120px;overflow-y:auto;min-height:40px;
+}
+.log-line{margin-bottom:3px;}.log-ok{color:var(--teal);}.log-err{color:var(--red);}.log-info{color:var(--gold);}
+.admin-footer{padding:18px 28px;display:flex;gap:10px;justify-content:flex-end;border-top:1px solid rgba(107,45,139,0.12);margin-top:14px;}
+.btn-pri{background:#6b2d8b;color:#fff;font-weight:700;font-size:0.83rem;
+  padding:9px 22px;border:none;border-radius:8px;cursor:pointer;transition:.2s;font-family:Verdana,sans-serif;}
+.btn-pri:hover{filter:brightness(1.1);}
+.btn-pri:disabled{opacity:0.5;cursor:not-allowed;}
+.btn-sec{background:transparent;color:var(--mid);font-size:0.83rem;
+  padding:9px 18px;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-family:Verdana,sans-serif;}
+.btn-sec:hover{border-color:var(--mid);color:#fff;}
+
+/* ── TOAST ───────────────────────────────────────────────────────── */
+#toast{
+  position:fixed;bottom:28px;right:28px;z-index:999;
+  background:#ffffff;border:1px solid rgba(107,45,139,0.2);border-radius:10px;
+  padding:12px 18px;font-size:0.82rem;color:#1a0533;max-width:340px;
+  box-shadow:var(--shadow);transform:translateY(80px);opacity:0;transition:.3s;
+  display:flex;align-items:center;gap:10px;
+}
+#toast.show{transform:translateY(0);opacity:1;}
+#toast.toast-ok{border-color:rgba(0,201,167,0.4);}
+#toast.toast-err{border-color:rgba(231,76,60,0.4);}
+
+/* ── STAT LIST ───────────────────────────────────────────────────── */
+.stat-list{}.sl-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);}
+.sl-row:last-child{border:none;}
+.sl-label{font-size:0.79rem;color:var(--mid);}
+.sl-val{font-family:Verdana,sans-serif;font-weight:700;color:#1a0533;font-size:0.86rem;text-align:right;}
+.prog{height:4px;background:rgba(255,255,255,0.07);border-radius:2px;margin-top:3px;min-width:80px;}
+.prog-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--teal),var(--blue));transition:width .6s;}
+
+/* ── EMPTY STATE ─────────────────────────────────────────────────── */
+.empty{text-align:center;padding:56px 20px;color:var(--mid);}
+.empty-icon{font-size:2.6rem;margin-bottom:12px;}
+.empty p{font-size:0.88rem;line-height:1.7;}
+.empty b{color:var(--teal);}
+
+@media(max-width:900px){.grid2,.grid3,.grid4{grid-template-columns:1fr;}.fg{grid-template-columns:1fr;}.ds-grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="nav">
+  <div class="nav-logo"><img src="data:image/png;base64,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" alt="Polaris Bank" style="height:38px;width:auto;object-fit:contain;border-radius:4px;" /></div>
+  <button class="nav-btn active" onclick="nav('opex',this)">📊 OPEX</button>
+  <button class="nav-btn" onclick="nav('assets',this)">🏦 Fixed Assets</button>
+  <button class="nav-btn" onclick="nav('contracts',this)">📋 Contracts</button>
+  <button class="nav-btn" onclick="nav('achievements',this)">🏆 Achievements</button>
+  <button class="nav-btn" onclick="nav('organogram',this)">👥 Organogram</button>
+  <button class="nav-btn" onclick="nav('strategy',this)">🎯 Strategy</button>
+  <div class="nav-right">
+    <div id="data-status-dot" title="Data status"></div>
+    <div id="data-status-label">Loading…</div>
+    <button class="upload-trigger" id="manage-data-btn" onclick="openAdmin()" style="display:none;">⬆ Manage Data</button>
+  </div>
+</nav>
+
+<!-- ADMIN PANEL -->
+<div id="admin-panel">
+  <div class="admin-box">
+    <div class="admin-header">
+      <div><div class="admin-title">📂 Data Management Console</div>
+        <div class="admin-sub">Upload Excel files to automatically refresh all dashboard sections</div></div>
+      <button class="admin-close" onclick="closeAdmin()">✕</button>
+    </div>
+    <div class="ds-grid" id="ds-grid">
+      <!-- Populated by JS -->
+    </div>
+    <div class="admin-log" id="admin-log"><div class="log-line log-info">Ready. Select Excel files to upload.</div></div>
+    <div class="admin-footer">
+      <button class="btn-sec" onclick="closeAdmin()">Close</button>
+      <button class="btn-pri" id="upload-all-btn" onclick="uploadAll()">⬆ Upload All & Refresh</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"><span id="toast-icon">✓</span><span id="toast-msg"></span></div>
+
+<!-- ══════════ PAGE: OPEX ══════════ -->
+<div id="page-opex" class="page active">
+  <div class="ph">
+    <div class="ph-top">
+      <div><div class="ph-title">OPEX Dashboard</div><div class="ph-sub">Operational Expenditure · Jan 2024 – Dec 2025</div></div>
+      <div id="opex-updated" style="font-size:0.72rem;color:var(--mid);"></div>
+    </div>
+    <div class="ph-hr"></div>
+  </div>
+  <div class="kpi-row" id="opex-kpis">
+    <div class="empty" style="color:#6b5f7a;"><div class="empty-icon">📊</div><p>Upload <b>OPEX 2024</b> and <b>OPEX 2025</b> files to see results.</p></div>
+  </div>
+  <div class="ctrl-row">
+    <div class="ctrl-group"><label>Expense Head</label><select id="opex-head" onchange="renderOpexTrend()" style="min-width:240px;"></select></div>
+    <div class="ctrl-group"><label>View</label><select id="opex-view" onchange="renderOpexTrend()"><option value="both">2024 vs 2025</option><option value="2024">2024 Only</option><option value="2025">2025 Only</option></select></div>
+    <div class="ctrl-group"><label>Mode</label><select id="opex-mode" onchange="renderOpexTrend()"><option value="mom">Month-on-Month</option><option value="ytd">Year-to-Date</option></select></div>
+  </div>
+  <div class="grid3" style="margin-bottom:18px;">
+    <div class="cc"><div class="cc-title" id="trend-title">Monthly Trend</div><div style="height:290px;"><canvas id="opexTrendChart"></canvas></div></div>
+    <div class="cc"><div class="cc-title">Top 10 Expense Heads (2025)</div><div style="height:290px;"><canvas id="opexTopChart"></canvas></div></div>
+  </div>
+  <div class="grid2" style="margin-bottom:18px;">
+    <div class="cc"><div class="cc-title">Insurance Breakdown (2025)</div><div style="height:250px;"><canvas id="insChart"></canvas></div></div>
+    <div class="cc"><div class="cc-title">Category Comparison — 2024 vs 2025</div><div style="height:250px;"><canvas id="catChart"></canvas></div></div>
+  </div>
+  <div class="cc">
+    <div class="cc-title">All Expense Heads</div>
+    <div class="tbl-wrap" style="max-height:360px;overflow-y:auto;">
+      <table><thead><tr><th>Expense Head</th><th>Jan 2025</th><th>Jun 2025</th><th>Dec 2025</th><th>2025 Total</th><th>2024 Total</th><th>YoY Change</th></tr></thead>
+      <tbody id="opex-tbody"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ PAGE: ASSETS ══════════ -->
+<div id="page-assets" class="page">
+  <div class="ph"><div class="ph-title">Fixed Assets Report</div><div class="ph-sub">Properties · Fleet · Generators · ATMs</div><div class="ph-hr"></div></div>
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="assetTab('prop',this)">🏢 Properties</button>
+    <button class="tab-btn" onclick="assetTab('fleet',this)">🚗 Fleet</button>
+    <button class="tab-btn" onclick="assetTab('gen',this)">⚡ Generators</button>
+    <button class="tab-btn" onclick="assetTab('atm',this)">🏧 ATMs</button>
+  </div>
+
+  <div id="tp-prop" class="tab-pane active">
+    <div class="kpi-row" id="prop-kpis"></div>
+    <div class="grid2" style="margin-bottom:18px;">
+      <div class="cc"><div class="cc-title">By State <span class="badge-sm">Top 12</span></div><div style="height:270px;"><canvas id="propStateChart"></canvas></div></div>
+      <div class="cc"><div class="cc-title">By Usage Type</div><div style="height:270px;"><canvas id="propUseChart"></canvas></div></div>
+    </div>
+    <div class="cc"><div class="cc-title">Property Register</div>
+      <div class="ctrl-row" style="margin-bottom:12px;">
+        <div class="ctrl-group"><label>Search</label><input type="text" id="prop-q" placeholder="Description or state…" style="width:220px;" oninput="filterProp()"></div>
+        <div class="ctrl-group"><label>State</label><select id="prop-st" onchange="filterProp()"><option value="">All States</option></select></div>
+        <div class="ctrl-group"><label>Use</label><select id="prop-use" onchange="filterProp()"><option value="">All Types</option></select></div>
+        <div class="ctrl-group"><label>Title</label><select id="prop-title" onchange="filterProp()"><option value="">All Titles</option></select></div>
+      </div>
+      <div class="tbl-wrap" style="max-height:340px;overflow-y:auto;"><table><thead><tr><th>#</th><th>Branch Code</th><th>Description</th><th>State</th><th>Title</th><th>Use</th></tr></thead><tbody id="prop-tbody"></tbody></table></div>
+    </div>
+  </div>
+
+  <div id="tp-fleet" class="tab-pane">
+    <div class="kpi-row" id="fleet-kpis"></div>
+    <div class="grid2">
+      <div class="cc"><div class="cc-title">Fleet by Location & Age Group</div><div style="height:300px;"><canvas id="fleetLocChart"></canvas></div></div>
+      <div class="cc"><div class="cc-title">Fleet Status Overview</div><div style="height:300px;"><canvas id="fleetStatusChart"></canvas></div></div>
+    </div>
+  </div>
+
+  <div id="tp-gen" class="tab-pane">
+    <div class="kpi-row" id="gen-kpis"></div>
+    <div class="grid2" style="margin-bottom:18px;">
+      <div class="cc"><div class="cc-title">By Capacity (KVA)</div><div style="height:280px;"><canvas id="genCapChart"></canvas></div></div>
+      <div class="cc"><div class="cc-title">Age Distribution</div><div style="height:280px;"><canvas id="genAgeChart"></canvas></div></div>
+    </div>
+    <div class="cc"><div class="cc-title">Generator Summary Table</div>
+      <div class="tbl-wrap"><table><thead><tr><th>Capacity (KVA)</th><th>Count</th><th>Functional</th><th>Needs Repair</th><th>0-5 Yrs</th><th>6-10 Yrs</th><th>10+ Yrs</th></tr></thead><tbody id="gen-tbody"></tbody></table></div>
+    </div>
+  </div>
+
+  <div id="tp-atm" class="tab-pane">
+    <div class="kpi-row" id="atm-kpis"></div>
+    <div class="grid2" style="margin-bottom:18px;">
+      <div class="cc"><div class="cc-title">ATMs by Region</div><div style="height:280px;"><canvas id="atmRegChart"></canvas></div></div>
+      <div class="cc"><div class="cc-title">Regional Distribution</div><div class="stat-list" id="atm-stat-list" style="max-height:280px;overflow-y:auto;padding:4px 0;"></div></div>
+    </div>
+    <div class="cc"><div class="cc-title">ATM Register</div>
+      <div class="ctrl-row" style="margin-bottom:12px;">
+        <div class="ctrl-group"><label>Search</label><input type="text" id="atm-q" placeholder="Branch or region…" style="width:220px;" oninput="filterATM()"></div>
+        <div class="ctrl-group"><label>Region</label><select id="atm-reg" onchange="filterATM()"><option value="">All Regions</option></select></div>
+      </div>
+      <div class="tbl-wrap" style="max-height:320px;overflow-y:auto;"><table><thead><tr><th>#</th><th>Region</th><th>Branch Name</th><th>Branch Code</th><th>Terminal Name</th><th>Terminal ID</th></tr></thead><tbody id="atm-tbody"></tbody></table></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ PAGE: CONTRACTS ══════════ -->
+<div id="page-contracts" class="page">
+  <div class="ph"><div class="ph-title">Contracts & Purchases</div><div class="ph-sub">LPO Register · 2025</div><div class="ph-hr"></div></div>
+  <div class="kpi-row" id="con-kpis"></div>
+  <div class="grid2" style="margin-bottom:18px;">
+    <div class="cc"><div class="cc-title">Monthly Spend (₦)</div><div style="height:250px;"><canvas id="conMonthChart"></canvas></div></div>
+    <div class="cc"><div class="cc-title">Spend by Category</div><div style="height:250px;"><canvas id="conCatChart"></canvas></div></div>
+  </div>
+  <div class="cc"><div class="cc-title">LPO Register</div>
+    <div class="ctrl-row" style="margin-bottom:12px;">
+      <div class="ctrl-group"><label>Search</label><input type="text" id="con-q" placeholder="Description or vendor…" style="width:220px;" oninput="filterCon()"></div>
+      <div class="ctrl-group"><label>Month</label><select id="con-month" onchange="filterCon()"><option value="">All Months</option></select></div>
+      <div class="ctrl-group"><label>Category</label><select id="con-cat" onchange="filterCon()"><option value="">All Categories</option><option>Vehicles</option><option>Technology</option><option>Power & Generators</option><option>Furniture</option><option>Stationery</option><option>Renovation</option><option>Insurance</option><option>Other</option></select></div>
+    </div>
+    <div class="tbl-wrap" style="max-height:400px;overflow-y:auto;"><table><thead><tr><th>Month</th><th>LPO No.</th><th>Description</th><th>Vendor</th><th>Category</th><th>Total (₦)</th></tr></thead><tbody id="con-tbody"></tbody></table></div>
+  </div>
+</div>
+
+<!-- ══════════ PAGE: ACHIEVEMENTS ══════════ -->
+<div id="page-achievements" class="page">
+  <div class="ph"><div class="ph-title">Department Achievements</div><div class="ph-sub">Regional updates · Editable by department personnel</div><div class="ph-hr"></div></div>
+  <div class="ach-form">
+    <div class="ach-form-title">➕ Add New Achievement</div>
+    <div class="fg"><div><label style="font-size:.72rem;color:var(--mid);text-transform:uppercase;letter-spacing:.5px;">Title</label><input type="text" id="af-title" placeholder="Achievement title…" style="margin-top:5px;"></div><div><label style="font-size:.72rem;color:var(--mid);text-transform:uppercase;letter-spacing:.5px;">Personnel</label><input type="text" id="af-person" placeholder="Name / Team" style="margin-top:5px;"></div></div>
+    <div class="fg"><div><label style="font-size:.72rem;color:var(--mid);text-transform:uppercase;letter-spacing:.5px;">Region</label><select id="af-region" style="width:100%;margin-top:5px;"><option>Head Office</option><option>Lagos I</option><option>Lagos II</option><option>Lagos III</option><option>South West</option><option>South East I</option><option>South East II</option><option>South South</option><option>North I</option><option>North II</option><option>Abuja</option></select></div><div><label style="font-size:.72rem;color:var(--mid);text-transform:uppercase;letter-spacing:.5px;">Category</label><select id="af-cat" style="width:100%;margin-top:5px;"><option>Operations</option><option>Technology</option><option>Compliance</option><option>Cost Savings</option><option>Customer Experience</option><option>Facilities</option><option>Other</option></select></div></div>
+    <label style="font-size:.72rem;color:var(--mid);text-transform:uppercase;letter-spacing:.5px;">Description</label><textarea id="af-body" placeholder="Describe the achievement and impact…" style="margin-top:5px;"></textarea>
+    <button class="btn-pri" onclick="addAch()" style="margin-top:2px;">Add Achievement</button>
+  </div>
+  <div class="ctrl-row">
+    <div class="ctrl-group"><label>Region</label><select id="ach-fr" onchange="renderAchs()"><option value="">All Regions</option><option>Head Office</option><option>Lagos I</option><option>Lagos II</option><option>Lagos III</option><option>South West</option><option>South East I</option><option>South East II</option><option>South South</option><option>North I</option><option>North II</option><option>Abuja</option></select></div>
+    <div class="ctrl-group"><label>Category</label><select id="ach-fc" onchange="renderAchs()"><option value="">All Categories</option><option>Operations</option><option>Technology</option><option>Compliance</option><option>Cost Savings</option><option>Customer Experience</option><option>Facilities</option><option>Other</option></select></div>
+    <div style="font-size:0.78rem;color:var(--mid);align-self:flex-end;padding-bottom:8px;" id="ach-count"></div>
+  </div>
+  <div class="ach-grid" id="ach-grid"></div>
+</div>
+
+<!-- ══════════ PAGE: ORGANOGRAM ══════════ -->
+<div id="page-organogram" class="page">
+  <div class="ph"><div class="ph-title">EBR Organogram</div><div class="ph-sub">Enterprise Business Resources Department — January 2026</div><div class="ph-hr"></div></div>
+  <div class="cc" style="margin-bottom:18px;"><div id="org-tree" class="org-tree"></div></div>
+  <div class="kpi-row" id="org-kpis"></div>
+</div>
+
+<!-- ══════════ PAGE: STRATEGY ══════════ -->
+<div id="page-strategy" class="page">
+  <div class="ph"><div class="ph-title">EBR Strategy</div><div class="ph-sub">Strategic Framework & Objectives · 2025–2027</div><div class="ph-hr"></div></div>
+  <div class="kpi-row" style="margin-bottom:22px;">
+    <div class="kpi" style="--ac:var(--teal)"><div class="kpi-lbl">Strategic Pillars</div><div class="kpi-val">6</div></div>
+    <div class="kpi" style="--ac:var(--gold)"><div class="kpi-lbl">Planning Horizon</div><div class="kpi-val" style="font-size:1.05rem;">2025 – 2027</div></div>
+    <div class="kpi" style="--ac:var(--blue)"><div class="kpi-lbl">Priority Focus</div><div class="kpi-val" style="font-size:0.85rem;line-height:1.3;">Assets · Cost · Technology</div></div>
+    <div class="kpi" style="--ac:var(--purple)"><div class="kpi-lbl">Target Year</div><div class="kpi-val">2027</div></div>
+  </div>
+  <div class="strat-grid" id="strat-grid"></div>
+</div>
+
+<!-- ══════════ SCRIPTS ══════════ -->
+<script>
+const API = "http://localhost:5000/api";
+const MN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+let D = {};   // live data store
+let ACHLIST = [];
+let ACHID = 100;
+const charts = {};
+
+// ── Format ─────────────────────────────────────────────────────
+function fN(v) {
+  if (!v || isNaN(v)) return "₦0";
+  if (v >= 1e9) return "₦" + (v/1e9).toFixed(2) + "B";
+  if (v >= 1e6) return "₦" + (v/1e6).toFixed(1) + "M";
+  if (v >= 1e3) return "₦" + (v/1e3).toFixed(0) + "K";
+  return "₦" + Math.round(v).toLocaleString();
+}
+function fFull(v) { return "₦" + (+(v||0)).toLocaleString("en-NG",{maximumFractionDigits:0}); }
+function sm(arr) { return (arr||[]).reduce((a,b)=>a+(+b||0),0); }
+function dc(id) { if(charts[id]){charts[id].destroy();delete charts[id];} }
+
+// ── Toast ──────────────────────────────────────────────────────
+function toast(msg, type="ok") {
+  const el=document.getElementById("toast"),
+        ic=document.getElementById("toast-icon"),
+        ms=document.getElementById("toast-msg");
+  el.className="show toast-"+type;
+  ic.textContent = type==="ok"?"✓":"⚠";
+  ms.textContent = msg;
+  setTimeout(()=>el.className="",3500);
+}
+
+// ── Nav ────────────────────────────────────────────────────────
+function nav(pg, btn) {
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".nav-btn").forEach(b=>b.classList.remove("active"));
+  document.getElementById("page-"+pg).classList.add("active");
+  if(btn) btn.classList.add("active");
+}
+function assetTab(tab, btn) {
+  document.querySelectorAll(".tab-pane").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+  document.getElementById("tp-"+tab).classList.add("active");
+  if(btn) btn.classList.add("active");
+}
+
+// ── Admin Panel ────────────────────────────────────────────────
+const DS_META = {
+  opex2024:   {icon:"📊",label:"OPEX 2024",hint:"OPEX_AND_CAPEX_DEC_2024.xlsx"},
+  opex2025:   {icon:"📊",label:"OPEX 2025",hint:"OPEX_AND_CAPEX_DEC_2025.xlsx"},
+  properties: {icon:"🏢",label:"Properties",hint:"Property_Schedule.xlsx"},
+  fleet:      {icon:"🚗",label:"Fleet",hint:"Power_bi_fleet_data.xlsx"},
+  generators: {icon:"⚡",label:"Generators",hint:"BRANCH_GENERATOR_SCHEDULE.xlsx"},
+  atms:       {icon:"🏧",label:"ATMs",hint:"LIST_OF_ACTIVE_ATMS_BANKWIDE.xlsx"},
+  contracts:  {icon:"📋",label:"Contracts",hint:"2025_contract_issued.xlsx"},
+  isg:        {icon:"👮",label:"ISG Staff",hint:"ISGs_Location_Nationwide.xlsx"},
+};
+const pendingFiles = {};
+
+function buildAdminGrid(status) {
+  const grid = document.getElementById("ds-grid");
+  grid.innerHTML = Object.entries(DS_META).map(([key,m])=>{
+    const s = (status||{})[key]||{};
+    const loaded = s.loaded;
+    const ts = s.updated ? `Last updated: ${s.updated}` : "Not yet uploaded";
+    return `<div class="ds-item${loaded?" loaded":""}" id="dsi-${key}">
+      <div class="ds-label">${m.icon} ${m.label}</div>
+      <div class="ds-hint">${m.hint}</div>
+      <div class="ds-state${loaded?" ok":" none"}">${loaded?"✓ "+ts:"⬆ Click to select file"}</div>
+      <input type="file" accept=".xlsx,.xls" onchange="selectFile('${key}',this)">
+    </div>`;
+  }).join("");
+}
+
+function selectFile(key, input) {
+  const f = input.files[0];
+  if(!f) return;
+  pendingFiles[key] = f;
+  const el = document.getElementById("dsi-"+key);
+  el.className = "ds-item processing";
+  el.querySelector(".ds-state").className = "ds-state pending";
+  el.querySelector(".ds-state").textContent = `📁 Ready: ${f.name}`;
+  log(`Selected "${f.name}" for ${DS_META[key].label}`, "info");
+}
+
+function log(msg, type="ok") {
+  const el = document.getElementById("admin-log");
+  const ts = new Date().toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+  el.innerHTML += `<div class="log-line log-${type}">[${ts}] ${msg}</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+async function uploadAll() {
+  const keys = Object.keys(pendingFiles);
+  if(!keys.length) { toast("No files selected. Click on a dataset tile to choose a file.","err"); return; }
+  const btn = document.getElementById("upload-all-btn");
+  btn.disabled = true; btn.textContent = "⏳ Uploading…";
+  let ok=0, fail=0;
+  for(const key of keys) {
+    const f = pendingFiles[key];
+    log(`Uploading ${DS_META[key].label} — ${f.name}…`, "info");
+    try {
+      const fd = new FormData();
+      fd.append("file", f);
+      const res = await fetch(`${API}/upload/${key}`, {method:"POST", body:fd});
+      const j = await res.json();
+      if(j.ok) {
+        ok++;
+        log(`✓ ${DS_META[key].label}: ${j.records} records processed`, "ok");
+        const el = document.getElementById("dsi-"+key);
+        el.className = "ds-item loaded";
+        el.querySelector(".ds-state").className = "ds-state ok";
+        el.querySelector(".ds-state").textContent = `✓ ${j.records} records · ${j.updated}`;
+        delete pendingFiles[key];
+      } else {
+        fail++;
+        log(`✗ ${DS_META[key].label}: ${j.error}`, "err");
+        document.getElementById("dsi-"+key).classList.add("error");
+      }
+    } catch(e) {
+      fail++;
+      log(`✗ ${DS_META[key].label}: Network error — is the server running?`, "err");
+    }
+  }
+  btn.disabled = false; btn.textContent = "⬆ Upload All & Refresh";
+  toast(`Upload complete: ${ok} succeeded, ${fail} failed`, ok&&!fail?"ok":"err");
+  if(ok > 0) { await loadAllData(); refreshDashboard(); }
+}
+
+// ── MANAGE DATA: only visible with ?admin=true in URL ──
+(function() {
+  if (new URLSearchParams(window.location.search).get('admin') === 'true') {
+    const btn = document.getElementById('manage-data-btn');
+    if (btn) btn.style.display = 'inline-flex';
+  }
+})();
+
+function openAdmin() {
+  checkStatus();
+  document.getElementById("admin-panel").classList.add("open");
+}
+function closeAdmin() {
+  document.getElementById("admin-panel").classList.remove("open");
+}
+
+// ── Data loading ───────────────────────────────────────────────
+async function checkStatus() {
+  try {
+    const r = await fetch(`${API}/status`);
+    const j = await r.json();
+    buildAdminGrid(j.status);
+    const loaded = Object.values(j.status).filter(s=>s.loaded).length;
+    const total = Object.keys(j.status).length;
+    const dot = document.getElementById("data-status-dot");
+    const lbl = document.getElementById("data-status-label");
+    if(loaded === total) { dot.className="ok"; lbl.textContent=`Data current (${loaded}/${total})`; }
+    else if(loaded > 0)  { dot.className="partial"; lbl.textContent=`${loaded}/${total} datasets loaded`; }
+    else                 { dot.className="error"; lbl.textContent="No data uploaded"; }
+  } catch(e) {
+    document.getElementById("data-status-dot").className = "error";
+    document.getElementById("data-status-label").textContent = "Server offline";
+    buildAdminGrid({});
+  }
+}
+
+async function loadAllData() {
+  try {
+    const r = await fetch(`${API}/data/all`);
+    const j = await r.json();
+    D = j.data || {};
+    // Load achievements
+    const ar = await fetch(`${API}/achievements`);
+    const aj = await ar.json();
+    if(aj.ok && aj.data.length) ACHLIST = aj.data;
+  } catch(e) {
+    console.warn("Could not reach backend, using empty data:", e);
+    D = {};
+  }
+}
+
+function refreshDashboard() {
+  if(D.opex2024 || D.opex2025) buildOPEX();
+  if(D.properties) buildProperties();
+  if(D.fleet)      buildFleet();
+  if(D.generators) buildGenerators();
+  if(D.atms)       buildATMs();
+  if(D.contracts)  buildContracts();
+  if(D.isg)        buildOrg();
+  checkStatus();
+}
+
+// ── KPI helper ────────────────────────────────────────────────
+function kpi(label,val,sub,ac) {
+  return `<div class="kpi" style="--ac:${ac}"><div class="kpi-lbl">${label}</div><div class="kpi-val">${val}</div><div class="kpi-sub">${sub||""}</div></div>`;
+}
+
+// ── OPEX ──────────────────────────────────────────────────────
+function buildOPEX() {
+  const d24 = D.opex2024||{}, d25 = D.opex2025||{};
+  const heads = [...new Set([...Object.keys(d24),...Object.keys(d25)])].sort();
+  const t24 = Object.values(d24).reduce((a,v)=>a+sm(v),0);
+  const t25 = Object.values(d25).reduce((a,v)=>a+sm(v),0);
+  const yoy = t24>0?(((t25-t24)/t24)*100).toFixed(1):0;
+
+  document.getElementById("opex-kpis").innerHTML =
+    kpi("2024 Total OPEX", fN(t24), "Full Year", "var(--teal)") +
+    kpi("2025 Total OPEX", fN(t25), "Full Year", "var(--gold)") +
+    kpi("YoY Growth", (yoy>0?"+":"")+yoy+"%", "2024 → 2025", parseFloat(yoy)>20?"var(--red)":"var(--blue)") +
+    kpi("Expense Heads", heads.length, "GL Categories", "var(--purple)") +
+    kpi("Top Head (2025)", "Gen. Diesel", fN(sm(d25["GENERATOR DIESEL OFFICE"]||[0])), "var(--green)");
+
+  // Populate dropdown
+  const sel = document.getElementById("opex-head");
+  const cur = sel.value;
+  sel.innerHTML = heads.map(h=>`<option value="${h}">${h}</option>`).join("");
+  if(cur && heads.includes(cur)) sel.value = cur;
+
+  renderOpexTrend();
+
+  // Top 10
+  const top10 = heads.map(h=>({h,t:sm(d25[h]||[0])})).sort((a,b)=>b.t-a.t).slice(0,10);
+  dc("opexTop");
+  charts["opexTop"] = new Chart(document.getElementById("opexTopChart"),{
+    type:"bar",
+    data:{labels:top10.map(x=>x.h.length>20?x.h.substring(0,20)+"…":x.h),datasets:[{data:top10.map(x=>x.t),backgroundColor:"rgba(0,201,167,0.7)",borderRadius:4}]},
+    options:{indexAxis:"y",responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:"#8fa3c0",callback:v=>fN(v)}},y:{ticks:{color:"#8fa3c0",font:{size:9}}}}}
+  });
+
+  // Insurance
+  const iKeys = ["INSURANCE - WORKMEN COMP.","INSURANCE - THEFT & BURGLARY","INSURANCE - COMPUTER","INSURANCE   FIRE  BURGLARY","INSURANCE   OPERATIONAL","INSURANCE   MOTOR VEHICLES"];
+  const iVals = iKeys.map(k=>sm(d25[k]||[0]));
+  dc("ins");
+  charts["ins"] = new Chart(document.getElementById("insChart"),{
+    type:"doughnut",
+    data:{labels:iKeys.map(k=>k.replace(/INSURANCE\s*/,"").substring(0,22)),datasets:[{data:iVals,backgroundColor:["#00c9a7","#f5a623","#e74c3c","#2563eb","#8b5cf6","#f472b6"],borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"right",labels:{color:"#8fa3c0",font:{size:10},boxWidth:10}}}}
+  });
+
+  // Category compare
+  const catMap = {
+    "Utilities & Power":["GENERATOR DIESEL OFFICE","UTILITIES ELECTRICITY (PAAS)","UTILITIES   ELECTRICITY"],
+    "Security":["SECURITY & GUARDS EXPENSES"],
+    "Repairs & Maint.":["REP. & MAINT. OFF. EQUIP.","REP. & MAINT. GENERATOR OFFICE","REP. & MAINT. OFFICE PREMISES"],
+    "Fleet & Travel":["FLEET OUTSOURCING EXPENSE","VEHICLE FUELING OFFICE"],
+    "Insurance":iKeys,
+    "Stationery & Office":["PRE PRINTED STATIONERY","OTHER STATIONERY","OFFICE EXPS"],
+  };
+  const cats = Object.keys(catMap);
+  dc("cat");
+  charts["cat"] = new Chart(document.getElementById("catChart"),{
+    type:"bar",
+    data:{labels:cats,datasets:[{label:"2024",data:cats.map(c=>catMap[c].reduce((a,h)=>a+sm(d24[h]||[0]),0)),backgroundColor:"rgba(37,99,235,0.6)",borderRadius:3},{label:"2025",data:cats.map(c=>catMap[c].reduce((a,h)=>a+sm(d25[h]||[0]),0)),backgroundColor:"rgba(0,201,167,0.7)",borderRadius:3}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:"#8fa3c0",font:{size:10}}}},scales:{x:{ticks:{color:"#8fa3c0",font:{size:9}}},y:{ticks:{color:"#8fa3c0",callback:v=>fN(v)}}}}
+  });
+
+  // Table
+  document.getElementById("opex-tbody").innerHTML = heads
+    .map(h=>({h,t25:sm(d25[h]||[0]),t24:sm(d24[h]||[0]),a25:d25[h]||Array(12).fill(0)}))
+    .sort((a,b)=>b.t25-a.t25)
+    .map(({h,t25,t24,a25})=>{
+      const yv = t24>0?(((t25-t24)/t24)*100).toFixed(1):null;
+      const cls = yv===null?"pill-b":parseFloat(yv)>15?"pill-r":parseFloat(yv)>0?"pill-y":"pill-t";
+      return `<tr><td>${h}</td><td>${fN(a25[0])}</td><td>${fN(a25[5])}</td><td>${fN(a25[11])}</td><td style="font-weight:600;color:#1a0533">${fN(t25)}</td><td>${fN(t24)}</td><td><span class="pill ${cls}">${yv===null?"New":(parseFloat(yv)>0?"+":"")+yv+"%"}</span></td></tr>`;
+    }).join("");
+}
+
+function renderOpexTrend() {
+  const d24=D.opex2024||{}, d25=D.opex2025||{};
+  const head = document.getElementById("opex-head").value;
+  const view = document.getElementById("opex-view").value;
+  const mode = document.getElementById("opex-mode").value;
+  let a24 = (d24[head]||Array(12).fill(0)).slice();
+  let a25 = (d25[head]||Array(12).fill(0)).slice();
+  if(mode==="ytd") {
+    a24 = a24.map((v,i)=>a24.slice(0,i+1).reduce((x,y)=>x+y,0));
+    a25 = a25.map((v,i)=>a25.slice(0,i+1).reduce((x,y)=>x+y,0));
+  }
+  const labels = MN.map(m=>m+" 2024").concat(MN.map(m=>m+" 2025"));
+  const datasets = [];
+  if(view!=="2025") datasets.push({label:"2024",data:a24.concat(Array(12).fill(null)),borderColor:"#2563eb",backgroundColor:"rgba(37,99,235,0.08)",fill:true,tension:0.4,pointRadius:3,borderWidth:2});
+  if(view!=="2024") datasets.push({label:"2025",data:Array(12).fill(null).concat(a25),borderColor:"#00c9a7",backgroundColor:"rgba(0,201,167,0.08)",fill:true,tension:0.4,pointRadius:3,borderWidth:2});
+  dc("opexTrend");
+  charts["opexTrend"] = new Chart(document.getElementById("opexTrendChart"),{
+    type:"line",
+    data:{labels,datasets},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:"#8fa3c0",font:{size:11}}}},scales:{x:{ticks:{color:"#8fa3c0",maxRotation:45,font:{size:9}}},y:{ticks:{color:"#8fa3c0",callback:v=>fN(v)}}}}
+  });
+  document.getElementById("trend-title").textContent = head + (mode==="ytd"?" — YTD":" — Monthly");
+}
+
+// ── Properties ────────────────────────────────────────────────
+function buildProperties() {
+  const data = D.properties||[];
+  const states={}, uses={}, titles={};
+  data.forEach(p=>{states[p.state]=(states[p.state]||0)+1;uses[p.use]=(uses[p.use]||0)+1;titles[p.title]=(titles[p.title]||0)+1;});
+  document.getElementById("prop-kpis").innerHTML =
+    kpi("Total Properties",data.length,"Nationwide","var(--teal)") +
+    kpi("Active Branches",data.filter(p=>p.use==="Branch").length,"Operational","var(--blue)") +
+    kpi("Freehold",data.filter(p=>p.title==="Freehold").length,((data.filter(p=>p.title==="Freehold").length/data.length*100).toFixed(1))+"% of portfolio","var(--gold)") +
+    kpi("Leasehold",data.filter(p=>p.title==="Leasehold").length,((data.filter(p=>p.title==="Leasehold").length/data.length*100).toFixed(1))+"% of portfolio","var(--red)") +
+    kpi("Excess",data.filter(p=>p.use==="Excess Property").length,"Available for disposal","var(--purple)");
+  const ss = Object.entries(states).sort((a,b)=>b[1]-a[1]).slice(0,12);
+  dc("propState");
+  charts["propState"]=new Chart(document.getElementById("propStateChart"),{type:"bar",data:{labels:ss.map(x=>x[0]),datasets:[{data:ss.map(x=>x[1]),backgroundColor:"rgba(0,201,167,0.7)",borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:"#8fa3c0",font:{size:9}}},y:{ticks:{color:"#8fa3c0"}}}}});
+  dc("propUse");
+  charts["propUse"]=new Chart(document.getElementById("propUseChart"),{type:"doughnut",data:{labels:Object.keys(uses),datasets:[{data:Object.values(uses),backgroundColor:["#00c9a7","#f5a623","#2563eb","#e74c3c","#8b5cf6","#f472b6","#10b981"],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"right",labels:{color:"#8fa3c0",font:{size:10},boxWidth:10}}}}});
+  const stSel=document.getElementById("prop-st"); stSel.innerHTML='<option value="">All States</option>'+Object.keys(states).sort().map(s=>`<option>${s}</option>`).join("");
+  const uSel=document.getElementById("prop-use"); uSel.innerHTML='<option value="">All Types</option>'+Object.keys(uses).sort().map(s=>`<option>${s}</option>`).join("");
+  const tSel=document.getElementById("prop-title"); tSel.innerHTML='<option value="">All Titles</option>'+Object.keys(titles).sort().map(s=>`<option>${s}</option>`).join("");
+  renderPropTable(data);
+}
+function filterProp() {
+  const q=document.getElementById("prop-q").value.toLowerCase();
+  const st=document.getElementById("prop-st").value, us=document.getElementById("prop-use").value, ti=document.getElementById("prop-title").value;
+  renderPropTable((D.properties||[]).filter(p=>(!st||p.state===st)&&(!us||p.use===us)&&(!ti||p.title===ti)&&(!q||p.desc?.toLowerCase().includes(q)||p.state?.toLowerCase().includes(q))));
+}
+function renderPropTable(data) {
+  document.getElementById("prop-tbody").innerHTML=data.map(p=>`<tr><td>${p.sn}</td><td>${p.brn}</td><td>${p.desc}</td><td>${p.state}</td><td><span class="pill ${p.title==="Freehold"?"pill-g":"pill-y"}">${p.title||"-"}</span></td><td>${p.use}</td></tr>`).join("");
+}
+
+// ── Fleet ─────────────────────────────────────────────────────
+function buildFleet() {
+  const data = D.fleet||[];
+  const total=data.reduce((a,f)=>a+f.total,0), inuse=data.reduce((a,f)=>a+f.in1016+f.in17p,0), grounded=data.reduce((a,f)=>a+f.grounded,0), aged=data.reduce((a,f)=>a+f.in17p,0);
+  document.getElementById("fleet-kpis").innerHTML=kpi("Total Fleet",total,"All locations","var(--teal)")+kpi("In Active Use",inuse,(inuse/total*100).toFixed(1)+"%","var(--blue)")+kpi("17+ Yrs In Use",aged,"Ageing vehicles","var(--gold)")+kpi("Grounded",grounded,"Awaiting repair","var(--red)");
+  dc("fleetLoc");
+  charts["fleetLoc"]=new Chart(document.getElementById("fleetLocChart"),{type:"bar",data:{labels:data.map(f=>f.loc),datasets:[{label:"10-16 Yrs",data:data.map(f=>f.in1016),backgroundColor:"rgba(0,201,167,0.7)",borderRadius:3},{label:"17+ Yrs",data:data.map(f=>f.in17p),backgroundColor:"rgba(245,166,35,0.7)",borderRadius:3},{label:"Grounded",data:data.map(f=>f.grounded),backgroundColor:"rgba(231,76,60,0.7)",borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:"#8fa3c0",font:{size:10}}}},scales:{x:{stacked:true,ticks:{color:"#8fa3c0",font:{size:8}}},y:{stacked:true,ticks:{color:"#8fa3c0"}}}}});
+  dc("fleetStatus");
+  charts["fleetStatus"]=new Chart(document.getElementById("fleetStatusChart"),{type:"doughnut",data:{labels:["10-16 Yrs","17+ Yrs","Grounded"],datasets:[{data:[data.reduce((a,f)=>a+f.in1016,0),aged,grounded],backgroundColor:["#00c9a7","#f5a623","#e74c3c"],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom",labels:{color:"#8fa3c0",font:{size:11},boxWidth:12}}}}});
+}
+
+// ── Generators ────────────────────────────────────────────────
+function buildGenerators() {
+  const data=D.generators||[];
+  const tC=data.reduce((a,g)=>a+g.count,0),tF=data.reduce((a,g)=>a+g.func,0),tR=data.reduce((a,g)=>a+g.repair,0),t05=data.reduce((a,g)=>a+g.y05,0),t10=data.reduce((a,g)=>a+g.y10p,0);
+  document.getElementById("gen-kpis").innerHTML=kpi("Total Generators",tC,"Bankwide","var(--teal)")+kpi("Functional",tF,(tF/tC*100).toFixed(1)+"%","var(--blue)")+kpi("Needs Repair",tR,(tR/tC*100).toFixed(1)+"%","var(--red)")+kpi("New (0-5 Yrs)",t05,"Recently installed","var(--gold)")+kpi("Ageing (10+ Yrs)",t10,(t10/tC*100).toFixed(1)+"% — Priority","var(--purple)");
+  dc("genCap");
+  charts["genCap"]=new Chart(document.getElementById("genCapChart"),{type:"bar",data:{labels:data.map(g=>g.cap+" KVA"),datasets:[{label:"Functional",data:data.map(g=>g.func),backgroundColor:"rgba(0,201,167,0.7)",borderRadius:3},{label:"Needs Repair",data:data.map(g=>g.repair),backgroundColor:"rgba(231,76,60,0.7)",borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:"#8fa3c0",font:{size:10}}}},scales:{x:{stacked:true,ticks:{color:"#8fa3c0",font:{size:9}}},y:{stacked:true,ticks:{color:"#8fa3c0"}}}}});
+  dc("genAge");
+  charts["genAge"]=new Chart(document.getElementById("genAgeChart"),{type:"doughnut",data:{labels:["0-5 Yrs","6-10 Yrs","10+ Yrs"],datasets:[{data:[t05,data.reduce((a,g)=>a+g.y610,0),t10],backgroundColor:["#00c9a7","#f5a623","#e74c3c"],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom",labels:{color:"#8fa3c0",font:{size:11},boxWidth:12}}}}});
+  document.getElementById("gen-tbody").innerHTML=data.map(g=>`<tr><td>${g.cap} KVA</td><td>${g.count}</td><td><span class="pill pill-g">${g.func}</span></td><td><span class="pill pill-r">${g.repair}</span></td><td>${g.y05}</td><td>${g.y610}</td><td><span class="pill ${g.y10p>10?"pill-r":"pill-y"}">${g.y10p}</span></td></tr>`).join("");
+}
+
+// ── ATMs ──────────────────────────────────────────────────────
+function buildATMs() {
+  const data=D.atms||[];
+  const regMap={};
+  data.forEach(a=>{regMap[a.region]=(regMap[a.region]||0)+1;});
+  const regs=Object.entries(regMap).sort((a,b)=>b[1]-a[1]);
+  document.getElementById("atm-kpis").innerHTML=kpi("Total ATMs",data.length,"Active bankwide","var(--teal)")+kpi("Regions",regs.length,"Coverage","var(--blue)")+kpi("Largest Region",regs[0]?regs[0][0]:"-",regs[0]?regs[0][1]+" ATMs":"-","var(--gold)");
+  dc("atmReg");
+  charts["atmReg"]=new Chart(document.getElementById("atmRegChart"),{type:"bar",data:{labels:regs.map(x=>x[0]),datasets:[{data:regs.map(x=>x[1]),backgroundColor:"rgba(37,99,235,0.7)",borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:"#8fa3c0",font:{size:9},maxRotation:45}},y:{ticks:{color:"#8fa3c0"}}}}});
+  document.getElementById("atm-stat-list").innerHTML=regs.map(r=>`<div class="sl-row"><span class="sl-label">${r[0]}</span><div class="sl-val">${r[1]}<div class="prog"><div class="prog-fill" style="width:${Math.round(r[1]/data.length*100)}%"></div></div></div></div>`).join("");
+  const rs=document.getElementById("atm-reg"); rs.innerHTML='<option value="">All Regions</option>'+regs.map(x=>`<option>${x[0]}</option>`).join("");
+  renderATMTable(data);
+}
+function filterATM(){
+  const q=document.getElementById("atm-q").value.toLowerCase(), r=document.getElementById("atm-reg").value;
+  renderATMTable((D.atms||[]).filter(a=>(!r||a.region===r)&&(!q||a.branch?.toLowerCase().includes(q)||a.region?.toLowerCase().includes(q))));
+}
+function renderATMTable(data){
+  document.getElementById("atm-tbody").innerHTML=data.map(a=>`<tr><td>${a.sn}</td><td>${a.region}</td><td>${a.branch}</td><td>${a.code}</td><td>${a.terminal||"-"}</td><td>${a.id}</td></tr>`).join("");
+}
+
+// ── Contracts ─────────────────────────────────────────────────
+function buildContracts(){
+  const data=D.contracts||[];
+  const tot=data.reduce((a,c)=>a+c.total,0);
+  const byCat={};
+  data.forEach(c=>{byCat[c.cat]=(byCat[c.cat]||0)+c.total;});
+  const mOrder=["January 2025","February 2025","March 2025","April 2025","May 2025","June 2025","July 2025","August 2025","September 2025","October 2025","November 2025","December 2025","January 2026"];
+  const mTot={};
+  data.forEach(c=>{mTot[c.month]=(mTot[c.month]||0)+c.total;});
+  const mLabels=mOrder.filter(m=>mTot[m]);
+  document.getElementById("con-kpis").innerHTML=kpi("Total LPO Spend",fN(tot),"2025 year","var(--teal)")+kpi("Vehicles",fN(byCat["Vehicles"]||0),((byCat["Vehicles"]||0)/tot*100).toFixed(1)+"% of total","var(--gold)")+kpi("Technology",fN(byCat["Technology"]||0),((byCat["Technology"]||0)/tot*100).toFixed(1)+"% of total","var(--blue)")+kpi("Power & Gen",fN(byCat["Power & Generators"]||0),((byCat["Power & Generators"]||0)/tot*100).toFixed(1)+"% of total","var(--red)")+kpi("LPOs Issued",data.length,"Total contracts","var(--purple)");
+  dc("conMonth");
+  charts["conMonth"]=new Chart(document.getElementById("conMonthChart"),{type:"bar",data:{labels:mLabels.map(m=>m.split(" ")[0].substring(0,3)),datasets:[{data:mLabels.map(m=>mTot[m]),backgroundColor:mLabels.map(m=>mTot[m]>200000000?"rgba(0,201,167,0.8)":"rgba(37,99,235,0.6)"),borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:"#8fa3c0"}},y:{ticks:{color:"#8fa3c0",callback:v=>fN(v)}}}}});
+  dc("conCat");
+  charts["conCat"]=new Chart(document.getElementById("conCatChart"),{type:"doughnut",data:{labels:Object.keys(byCat),datasets:[{data:Object.values(byCat),backgroundColor:["#f5a623","#00c9a7","#8b5cf6","#e74c3c","#2563eb","#f472b6","#10b981"],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom",labels:{color:"#8fa3c0",font:{size:10},boxWidth:10}}}}});
+  const ms=document.getElementById("con-month"); ms.innerHTML='<option value="">All Months</option>'+mLabels.map(m=>`<option>${m}</option>`).join("");
+  renderConTable(data);
+}
+function filterCon(){
+  const q=document.getElementById("con-q").value.toLowerCase(), m=document.getElementById("con-month").value, cat=document.getElementById("con-cat").value;
+  renderConTable((D.contracts||[]).filter(c=>(!m||c.month===m)&&(!cat||c.cat===cat)&&(!q||c.desc?.toLowerCase().includes(q)||c.vendor?.toLowerCase().includes(q))));
+}
+const catPill={Vehicles:"pill-y",Technology:"pill-b","Power & Generators":"pill-r",Furniture:"pill-g",Stationery:"pill-t",Renovation:"pill-p",Insurance:"pill-b",Other:"pill-b"};
+function renderConTable(data){
+  document.getElementById("con-tbody").innerHTML=data.sort((a,b)=>b.total-a.total).map(c=>`<tr><td>${(c.month||"").split(" ")[0].substring(0,3)}</td><td style="font-size:.7rem;color:var(--mid)">${String(c.lpo).substring(0,28)}</td><td>${String(c.desc).substring(0,52)}${c.desc?.length>52?"…":""}</td><td>${c.vendor}</td><td><span class="pill ${catPill[c.cat]||"pill-b"}">${c.cat}</span></td><td style="font-weight:600;color:#1a0533">${fFull(c.total)}</td></tr>`).join("");
+}
+
+// ── Achievements ─────────────────────────────────────────────
+ACHLIST = [
+  {id:1,title:"287 Generators — Full Audit Completed",body:"Comprehensive generator health assessment across all branches. 86.8% functional, 38 flagged for urgent repair.",person:"Generator Management Team",region:"Head Office",cat:"Operations",date:"Dec 2025"},
+  {id:2,title:"ATM Uptime — 663 ATMs Active Bankwide",body:"Maintained ATM availability across 14 regions with proactive preventive maintenance and rapid response.",person:"ATM Operations Unit",region:"Head Office",cat:"Operations",date:"Nov 2025"},
+  {id:3,title:"Fleet Expansion — ₦1.5B Vehicles Procured",body:"Procured and deployed pool vehicles including Toyota Landcruisers and premium SUVs, expanding operational reach.",person:"Fleet Management",region:"Head Office",cat:"Facilities",date:"Jun 2025"},
+  {id:4,title:"M-Files Document Management Deployed",body:"Successfully implemented electronic document management system valued at ₦262M across all departments.",person:"IT & EBR Team",region:"Head Office",cat:"Technology",date:"Aug 2025"},
+  {id:5,title:"Property Portfolio — 364 Properties Active",body:"Maintained and documented complete property portfolio including 218 active branches and 127 leasehold properties.",person:"Property Management",region:"Head Office",cat:"Facilities",date:"Jan 2026"},
+];
+ACHID = 10;
+function addAch(){
+  const t=document.getElementById("af-title").value.trim();
+  const b=document.getElementById("af-body").value.trim();
+  if(!t||!b){toast("Please complete Title and Description","err");return;}
+  ACHLIST.unshift({id:ACHID++,title:t,body:b,person:document.getElementById("af-person").value,region:document.getElementById("af-region").value,cat:document.getElementById("af-cat").value,date:new Date().toLocaleDateString("en-GB",{month:"short",year:"numeric"})});
+  document.getElementById("af-title").value=""; document.getElementById("af-body").value=""; document.getElementById("af-person").value="";
+  saveAchs(); renderAchs();
+  toast("Achievement added successfully");
+}
+function delAch(id){ACHLIST=ACHLIST.filter(a=>a.id!==id);saveAchs();renderAchs();}
+async function saveAchs(){
+  try { await fetch(`${API}/achievements`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(ACHLIST)}); } catch(e){}
+}
+const catCls={Operations:"pill-t",Technology:"pill-b",Compliance:"pill-y","Cost Savings":"pill-g","Customer Experience":"pill-y",Facilities:"pill-b",Other:"pill-p"};
+function renderAchs(){
+  const rf=document.getElementById("ach-fr").value, cf=document.getElementById("ach-fc").value;
+  const f=ACHLIST.filter(a=>(!rf||a.region===rf)&&(!cf||a.cat===cf));
+  document.getElementById("ach-count").textContent=`Showing ${f.length} of ${ACHLIST.length}`;
+  document.getElementById("ach-grid").innerHTML=f.map(a=>`
+    <div class="ach-card">
+      <button class="ach-del" onclick="delAch(${a.id})">✕</button>
+      <span class="pill ${catCls[a.cat]||"pill-p"} ach-cat">${a.cat}</span>
+      <span style="font-size:.68rem;color:var(--mid);margin-left:6px;">${a.region}</span>
+      <div class="ach-title">${a.title}</div>
+      <div class="ach-body">${a.body}</div>
+      <div class="ach-meta"><span>👤 ${a.person||"—"}</span><span>📅 ${a.date}</span></div>
+    </div>`).join("");
+}
+
+// ── Organogram ────────────────────────────────────────────────
+function buildOrg(){
+  const isg=D.isg||{total:331,regions:14,branches:218};
+  document.getElementById("org-tree").innerHTML=`
+    <div style="display:flex;flex-direction:column;align-items:center;gap:0;">
+      <div class="org-box root"><div class="org-name">CHRO / Executive Sponsor</div><div class="org-role" style="color:var(--gold);">Executive Oversight</div></div>
+      <div class="org-line"></div>
+      <div class="org-box head"><div class="org-name">Head, EBR</div><div class="org-role" style="color:var(--teal);">Department Head</div></div>
+      <div class="org-line"></div>
+      <div class="org-row" style="margin-bottom:0;">
+        <div style="display:flex;flex-direction:column;align-items:center;"><div class="org-line"></div><div class="org-box dh"><div class="org-name">DH, Operations</div><div class="org-role" style="color:#60a5fa;">Facilities & Admin</div></div></div>
+        <div style="display:flex;flex-direction:column;align-items:center;"><div class="org-line"></div><div class="org-box dh"><div class="org-name">DH, Technology</div><div class="org-role" style="color:#60a5fa;">IT & Systems</div></div></div>
+        <div style="display:flex;flex-direction:column;align-items:center;"><div class="org-line"></div><div class="org-box dh"><div class="org-name">DH, Asset Mgmt</div><div class="org-role" style="color:#60a5fa;">Properties & Fleet</div></div></div>
+        <div style="display:flex;flex-direction:column;align-items:center;"><div class="org-line"></div><div class="org-box dh"><div class="org-name">DH, Procurement</div><div class="org-role" style="color:#60a5fa;">Contracts & LPO</div></div></div>
+      </div>
+      <div class="org-line" style="height:30px;margin-top:0;"></div>
+      <div class="org-row">
+        <div style="display:flex;flex-direction:column;align-items:center;"><div class="org-line"></div><div class="org-box unit"><div class="org-name">Generator Mgmt</div><div class="org-role" style="color:var(--purple);">287 Units</div></div></div>
+        <div style="display:flex;flex-direction:column;align-items:center;"><div class="org-line"></div><div class="org-box unit"><div class="org-name">Fleet Management</div><div class="org-role" style="color:var(--purple);">854 Vehicles</div></div></div>
+        <div style="display:flex;flex-direction:column;align-items:center;"><div class="org-line"></div><div class="org-box unit"><div class="org-name">ATM Operations</div><div class="org-role" style="color:var(--purple);">663 ATMs</div></div></div>
+        <div style="display:flex;flex-direction:column;align-items:center;"><div class="org-line"></div><div class="org-box unit"><div class="org-name">Property Mgmt</div><div class="org-role" style="color:var(--purple);">364 Properties</div></div></div>
+        <div style="display:flex;flex-direction:column;align-items:center;"><div class="org-line"></div><div class="org-box unit"><div class="org-name">Security (ISG)</div><div class="org-role" style="color:var(--purple);">${isg.total} Guards</div></div></div>
+        <div style="display:flex;flex-direction:column;align-items:center;"><div class="org-line"></div><div class="org-box unit"><div class="org-name">Regional Reps</div><div class="org-role" style="color:var(--purple);">${isg.regions} Regions</div></div></div>
+      </div>
+    </div>`;
+  document.getElementById("org-kpis").innerHTML=kpi("ISG Total Staff",isg.total,"Security guards","var(--teal)")+kpi("Regions",isg.regions,"National coverage","var(--gold)")+kpi("Branches",isg.branches,"With ISG presence","var(--blue)")+kpi("Sub-Units","7","Core functions","var(--purple)");
+}
+
+// ── Strategy ──────────────────────────────────────────────────
+function buildStrategy(){
+  const pillars=[
+    {title:"🏗 Asset Lifecycle Management",ac:"#00c9a7",items:["Systematic tracking of all fixed assets — generators, ATMs, fleet, properties","Structured replacement plan for ageing assets (51.6% of generators aged 10+ years)","Annual asset verification and condition audit across all 14 regions"]},
+    {title:"💰 Cost Optimisation & OPEX Control",ac:"#f5a623",items:["Drive year-on-year OPEX efficiency through vendor consolidation","Negotiate improved insurance and service contract rates bankwide","Monitor and control top cost heads: Diesel, Utilities, Security, Repairs, Travel"]},
+    {title:"🚗 Fleet Modernisation",ac:"#2563eb",items:["Phased replacement of vehicles aged 17+ years","Introduce hybrid/electric fleet options for sustainability","Strengthen fleet outsourcing partnerships for optimised coverage"]},
+    {title:"🏢 Property Portfolio Optimisation",ac:"#8b5cf6",items:["Monetise or surrender 85+ excess properties","Convert collection centres to full branches where commercially viable","Proactively negotiate renewals on 127 leasehold properties ahead of expiry"]},
+    {title:"⚡ Power & Utility Resilience",ac:"#e74c3c",items:["Maintain 87%+ generator functionality across all branches","Expand Power-as-a-Service (PAAS) to reduce diesel dependency","Solar/renewable pilot at selected branches by Q4 2026"]},
+    {title:"📋 Procurement Excellence",ac:"#10b981",items:["Transparent LPO process with delivery tracking from issuance to delivery","Centralised vendor management with performance scoring","10% unit procurement cost reduction target year-on-year"]},
+  ];
+  document.getElementById("strat-grid").innerHTML=pillars.map(p=>`
+    <div class="strat-card" style="--ac:${p.ac}">
+      <div class="strat-title">${p.title}</div>
+      <ul>${p.items.map(i=>`<li>${i}</li>`).join("")}</ul>
+    </div>`).join("");
+}
+
+// ── INIT ──────────────────────────────────────────────────────
+(async function init(){
+  buildOrg();
+  buildStrategy();
+  renderAchs();
+  await loadAllData();
+  refreshDashboard();
+  checkStatus();
+})();
+</script>
+</body>
+</html>

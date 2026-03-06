@@ -1,0 +1,15 @@
+# Ignore raw uploaded Excel files
+uploads/
+
+# Ignore Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
+
+# Keep data JSON files — these must be committed so Render has the data
+# data/*.json  <-- NOT ignored, always commit these

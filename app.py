@@ -19,8 +19,16 @@ FRONT_DIR  = BASE_DIR / "frontend"
 DATA_DIR.mkdir(exist_ok=True)
 UPLOAD_DIR.mkdir(exist_ok=True)
 
-app = Flask(__name__, static_folder=str(FRONT_DIR), static_url_path="")
+app = Flask(__name__)  # No static folder — we serve HTML manually to avoid route conflicts
 CORS(app)
+
+@app.after_request
+def add_no_cache_headers(response):
+    """Force browsers to always fetch fresh content — no stale caches."""
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
 
@@ -243,7 +251,13 @@ PROCESSORS = {
 
 # ── ROUTES ────────────────────────────────────────────────────
 @app.route("/")
-def index(): return send_from_directory(str(FRONT_DIR), "dashboard.html")
+def index():
+    return send_from_directory(str(FRONT_DIR), "dashboard.html")
+
+@app.route("/<path:filename>")
+def static_files(filename):
+    """Serve frontend static files — only non-API paths reach here."""
+    return send_from_directory(str(FRONT_DIR), filename)
 
 @app.route("/api/status")
 def api_status():
